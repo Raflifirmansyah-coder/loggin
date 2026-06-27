@@ -1,0 +1,18 @@
+{
+  "name": "nexus-auth-app",
+  "version": "2.0.0",
+  "description": "Nexus - Login/Register + Admin Dashboard. Backend Express + PostgreSQL (Neon), siap deploy ke Vercel.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.6",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

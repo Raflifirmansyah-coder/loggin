@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  .font-display { font-family: 'Outfit', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  html, body {
+    background: #0A0A0F;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ---------- Ambient orbs ---------- */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #7C3AED, transparent 70%);
+    top: -12%; left: -10%;
+    opacity: 0.4;
+    animation: float1 18s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 440px; height: 440px;
+    background: radial-gradient(circle, #22D3EE, transparent 70%);
+    bottom: -16%; right: -10%;
+    opacity: 0.35;
+    animation: float2 20s ease-in-out infinite;
+  }
+  .orb-3 {
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, #C026D3, transparent 70%);
+    top: 38%; left: 58%;
+    opacity: 0.25;
+    animation: float3 22s ease-in-out infinite;
+  }
+  @keyframes float1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(60px, 80px) scale(1.15); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-50px, -60px) scale(1.1); }
+  }
+  @keyframes float3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-80px, 40px) scale(0.9); }
+  }
+
+  .noise {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    opacity: 0.022;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- Shared glass / buttons ---------- */
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass-input:focus {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(124, 58, 237, 0.6);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12), 0 0 24px rgba(124, 58, 237, 0.15);
+  }
+  .glass-input.field-invalid {
+    border-color: rgba(244, 63, 94, 0.6);
+    box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1);
+  }
+
+  .btn-glow {
+    background: linear-gradient(135deg, #7C3AED 0%, #C026D3 100%);
+    box-shadow: 0 4px 24px rgba(124, 58, 237, 0.35);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .btn-glow:hover::before { opacity: 1; }
+  .btn-glow:hover {
+    box-shadow: 0 6px 36px rgba(124, 58, 237, 0.55), 0 0 60px rgba(192, 38, 211, 0.25);
+    transform: translateY(-1px);
+  }
+  .btn-glow:active { transform: translateY(0px) scale(0.98); }
+  .btn-glow span { position: relative; z-index: 1; }
+  .btn-glow:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* ---------- Auth card-flip transition ---------- */
+  .card-stage { perspective: 1800px; }
+  .panel {
+    transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.45s ease, filter 0.5s ease;
+  }
+  .panel-hidden-next {
+    position: absolute; inset: 0;
+    transform: rotateY(60deg) translateX(40px) scale(0.92);
+    opacity: 0; filter: blur(6px); pointer-events: none;
+  }
+  .panel-hidden-prev {
+    position: absolute; inset: 0;
+    transform: rotateY(-60deg) translateX(-40px) scale(0.92);
+    opacity: 0; filter: blur(6px); pointer-events: none;
+  }
+  .panel-active {
+    position: relative;
+    transform: rotateY(0deg) translateX(0) scale(1);
+    opacity: 1; filter: blur(0px);
+  }
+
+  .tab-indicator { transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1); }
+  .field-wrap label { transition: color 0.25s ease; }
+
+  /* ---------- Toasts ---------- */
+  #toast-root {
+    position: fixed; top: 22px; right: 22px; left: 22px;
+    z-index: 60; display: flex; flex-direction: column;
+    align-items: flex-end; gap: 10px;
+  }
+  .toast {
+    min-width: 260px; max-width: 360px; width: 100%;
+    padding: 14px 16px; border-radius: 14px;
+    backdrop-filter: blur(20px);
+    display: flex; align-items: flex-start; gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .toast.success { background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .toast.error { background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .toast.leaving { animation: toastOut 0.35s ease forwards; }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(24px) scale(0.95); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0) scale(1); }
+    to { opacity: 0; transform: translateX(24px) scale(0.95); }
+  }
+
+  .pw-eye { transition: opacity 0.2s ease; }
+
+  .shake { animation: shakeAnim 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+  @keyframes shakeAnim {
+    10%, 90% { transform: translateX(-2px); }
+    20%, 80% { transform: translateX(4px); }
+    30%, 50%, 70% { transform: translateX(-7px); }
+    40%, 60% { transform: translateX(7px); }
+  }
+
+  .success-check { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ---------- Home page ---------- */
+  .card-hover {
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.3s ease, background-color 0.3s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    border-color: rgba(124, 58, 237, 0.35);
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  .fade-up { animation: fadeUp 0.5s cubic-bezier(0.4,0,0.2,1) forwards; opacity: 0; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Dashboard ---------- */
+  .row-fade { animation: rowIn 0.35s ease forwards; }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .stat-card { transition: transform 0.3s ease, border-color 0.3s ease; }
+  .stat-card:hover { transform: translateY(-2px); border-color: rgba(124, 58, 237, 0.3); }
+
+  .modal-backdrop { background: rgba(5, 5, 8, 0.7); backdrop-filter: blur(6px); }
+  .modal-panel { animation: modalIn 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.94) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .role-badge-admin { background: rgba(192, 38, 211, 0.15); color: #E879F9; border: 1px solid rgba(192, 38, 211, 0.3); }
+  .role-badge-user { background: rgba(34, 211, 238, 0.1); color: #67E8F9; border: 1px solid rgba(34, 211, 238, 0.25); }
+
+  table { border-collapse: separate; border-spacing: 0; }
+  tbody tr { transition: background-color 0.2s ease; }
+  tbody tr:hover { background-color: rgba(255, 255, 255, 0.025); }
+
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
+
+  ::selection { background: rgba(124, 58, 237, 0.4); }
+
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #fafafa;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Screen visibility helper */
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .screen.active.flex-screen { display: flex; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb, .panel, .btn-glow, .shake, .success-check, .row-fade, .stat-card, .modal-panel, .card-hover, .fade-up {
+      animation: none !important; transition: none !important;
+    }
+  }
+</style>
+</head>
+<body class="text-zinc-100">
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="noise"></div>
+  <div id="toast-root"></div>
+
+  <!-- ======================= SCREEN: AUTH (Login / Register) ======================= -->
+  <div id="screenAuth" class="screen active flex-screen relative z-10 min-h-screen items-center justify-center px-4 py-10">
+    <main class="w-full max-w-md">
+
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 btn-glow">
+          <span class="text-2xl font-bold font-display text-white">N</span>
+        </div>
+        <h1 class="font-display text-2xl font-semibold text-white tracking-tight">Nexus</h1>
+        <p class="text-zinc-500 text-sm mt-1">Ruang kerja pribadimu, satu akun untuk semuanya.</p>
+      </div>
+
+      <div class="glass rounded-2xl p-1.5 mb-6 relative grid grid-cols-2">
+        <div id="tabIndicator" class="tab-indicator absolute top-1.5 left-1.5 w-[calc(50%-6px)] h-[calc(100%-12px)] rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-lg shadow-violet-900/30"></div>
+        <button id="tabLogin" type="button" onclick="switchTab('login')" class="relative z-10 py-2.5 text-sm font-medium font-display text-white transition-colors duration-300">Masuk</button>
+        <button id="tabRegister" type="button" onclick="switchTab('register')" class="relative z-10 py-2.5 text-sm font-medium font-display text-zinc-400 transition-colors duration-300">Daftar</button>
+      </div>
+
+      <div class="card-stage relative">
+        <div class="glass rounded-3xl p-8 shadow-2xl shadow-black/40 relative min-h-[440px]">
+
+          <form id="loginPanel" class="panel panel-active" novalidate>
+            <h2 class="font-display text-xl font-semibold text-white mb-1">Selamat datang kembali</h2>
+            <p class="text-zinc-500 text-sm mb-6">Masuk untuk melanjutkan ke akunmu.</p>
+
+            <div class="field-wrap mb-4">
+              <label for="loginEmail" class="block text-xs font-medium text-zinc-400 mb-1.5">Username atau Email</label>
+              <input id="loginEmail" type="text" placeholder="username atau nama@email.com"
+                class="glass-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none">
+            </div>
+
+            <div class="field-wrap mb-2">
+              <label for="loginPassword" class="block text-xs font-medium text-zinc-400 mb-1.5">Kata sandi</label>
+              <div class="relative">
+                <input id="loginPassword" type="password" placeholder="••••••••"
+                  class="glass-input w-full rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder-zinc-600 outline-none">
+                <button type="button" onclick="togglePw('loginPassword')" class="pw-eye absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                  <svg id="loginPassword-icon" xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <p id="loginError" class="text-rose-400 text-xs mb-3 hidden"></p>
+
+            <button type="button" id="loginSubmitBtn" onclick="handleLogin()" class="btn-glow w-full mt-3 rounded-xl py-3.5 text-sm font-semibold font-display text-white">
+              <span>Masuk</span>
+            </button>
+
+            <p class="text-center text-zinc-500 text-sm mt-6">
+              Belum punya akun?
+              <button type="button" onclick="switchTab('register')" class="text-violet-400 hover:text-violet-300 font-medium">Daftar di sini</button>
+            </p>
+          </form>
+
+          <form id="registerPanel" class="panel panel-hidden-next" novalidate>
+            <h2 class="font-display text-xl font-semibold text-white mb-1">Buat akun baru</h2>
+            <p class="text-zinc-500 text-sm mb-6">Mulai perjalananmu bersama Nexus.</p>
+
+            <div class="field-wrap mb-4">
+              <label for="regUsername" class="block text-xs font-medium text-zinc-400 mb-1.5">Username</label>
+              <input id="regUsername" type="text" placeholder="namamu_unik"
+                class="glass-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none">
+            </div>
+
+            <div class="field-wrap mb-4">
+              <label for="regEmail" class="block text-xs font-medium text-zinc-400 mb-1.5">Email</label>
+              <input id="regEmail" type="email" placeholder="nama@email.com"
+                class="glass-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none">
+            </div>
+
+            <div class="field-wrap mb-2">
+              <label for="regPassword" class="block text-xs font-medium text-zinc-400 mb-1.5">Kata sandi</label>
+              <div class="relative">
+                <input id="regPassword" type="password" placeholder="Minimal 6 karakter"
+                  class="glass-input w-full rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder-zinc-600 outline-none">
+                <button type="button" onclick="togglePw('regPassword')" class="pw-eye absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                  <svg id="regPassword-icon" xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <p id="registerError" class="text-rose-400 text-xs mb-3 hidden"></p>
+
+            <button type="button" id="registerSubmitBtn" onclick="handleRegister()" class="btn-glow w-full mt-3 rounded-xl py-3.5 text-sm font-semibold font-display text-white">
+              <span>Daftar sekarang</span>
+            </button>
+
+            <p class="text-center text-zinc-500 text-sm mt-6">
+              Sudah punya akun?
+              <button type="button" onclick="switchTab('login')" class="text-violet-400 hover:text-violet-300 font-medium">Masuk di sini</button>
+            </p>
+          </form>
+
+        </div>
+      </div>
+
+      <p class="text-center text-zinc-600 text-xs mt-7">Data disimpan secara lokal di browser ini untuk keperluan demo.</p>
+    </main>
+  </div>
+
+  <!-- ======================= SCREEN: HOME (user biasa) ======================= -->
+  <div id="screenHome" class="screen relative z-10 min-h-screen">
+
+    <header class="border-b border-white/[0.06]">
+      <div class="max-w-5xl mx-auto px-5 md:px-8 py-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl btn-glow flex items-center justify-center flex-shrink-0">
+            <span class="font-display font-bold text-white text-sm">N</span>
+          </div>
+          <h1 class="font-display text-base font-semibold text-white leading-none">Nexus</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2.5 glass rounded-full pl-1.5 pr-4 py-1.5">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0" id="userAvatar"></div>
+            <span class="text-sm text-zinc-300" id="userNameLabel"></span>
+          </div>
+          <button onclick="logout()" class="text-sm text-zinc-400 hover:text-rose-400 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-white/5">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            Keluar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-5 md:px-8 py-10">
+
+      <div class="fade-up mb-10" style="animation-delay:50ms">
+        <p class="text-violet-400 text-sm font-medium mb-1.5" id="greetingTime"></p>
+        <h2 class="font-display text-3xl md:text-4xl font-semibold text-white tracking-tight">
+          Halo, <span id="greetingName"></span> 👋
+        </h2>
+        <p class="text-zinc-500 mt-2 text-sm md:text-base">Senang melihatmu lagi. Ini ruang kerjamu hari ini.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        <div class="fade-up glass rounded-2xl p-5" style="animation-delay:100ms">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Username</p>
+          <p class="font-display text-lg font-semibold text-white" id="infoUsername">—</p>
+        </div>
+        <div class="fade-up glass rounded-2xl p-5" style="animation-delay:150ms">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Email</p>
+          <p class="font-display text-lg font-semibold text-white truncate" id="infoEmail">—</p>
+        </div>
+        <div class="fade-up glass rounded-2xl p-5" style="animation-delay:200ms">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Bergabung sejak</p>
+          <p class="font-display text-lg font-semibold text-white" id="infoJoined">—</p>
+        </div>
+      </div>
+
+      <div class="fade-up" style="animation-delay:250ms">
+        <h3 class="font-display text-sm font-medium text-zinc-400 mb-4 tracking-wide">JELAJAHI</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <div class="card-hover glass rounded-2xl p-6 cursor-default">
+            <div class="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </div>
+            <h4 class="font-display text-white font-medium mb-1.5">Ruang kerja</h4>
+            <p class="text-zinc-500 text-sm">Kelola proyek dan catatan pribadimu di satu tempat.</p>
+          </div>
+
+          <div class="card-hover glass rounded-2xl p-6 cursor-default">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            </div>
+            <h4 class="font-display text-white font-medium mb-1.5">Aktivitas</h4>
+            <p class="text-zinc-500 text-sm">Pantau riwayat dan progres terbaru dari akunmu.</p>
+          </div>
+
+          <div class="card-hover glass rounded-2xl p-6 cursor-default">
+            <div class="w-10 h-10 rounded-xl bg-fuchsia-500/15 border border-fuchsia-500/25 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-fuchsia-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+            </div>
+            <h4 class="font-display text-white font-medium mb-1.5">Profil</h4>
+            <p class="text-zinc-500 text-sm">Lihat dan kelola informasi akun Anda.</p>
+          </div>
+
+          <div class="card-hover glass rounded-2xl p-6 cursor-default">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center mb-4">
+              <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <h4 class="font-display text-white font-medium mb-1.5">Pengaturan</h4>
+            <p class="text-zinc-500 text-sm">Sesuaikan preferensi dan keamanan akunmu.</p>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ======================= SCREEN: ADMIN DASHBOARD ======================= -->
+  <div id="screenAdmin" class="screen relative z-10 min-h-screen">
+
+    <header class="border-b border-white/[0.06]">
+      <div class="max-w-6xl mx-auto px-5 md:px-8 py-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl btn-glow flex items-center justify-center flex-shrink-0">
+            <span class="font-display font-bold text-white text-sm">N</span>
+          </div>
+          <div>
+            <h1 class="font-display text-base font-semibold text-white leading-none">Dashboard Admin</h1>
+            <p class="text-zinc-500 text-xs mt-0.5">Kelola seluruh akun terdaftar</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="hidden sm:flex items-center gap-2.5 glass rounded-full pl-1.5 pr-4 py-1.5">
+            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0" id="adminAvatar"></div>
+            <span class="text-sm text-zinc-300" id="adminNameLabel"></span>
+          </div>
+          <button onclick="logout()" class="text-sm text-zinc-400 hover:text-rose-400 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-white/5">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            Keluar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-5 md:px-8 py-8">
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="stat-card glass rounded-2xl p-5">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Total pengguna</p>
+          <p class="font-display text-3xl font-semibold text-white" id="statTotal">0</p>
+        </div>
+        <div class="stat-card glass rounded-2xl p-5">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Admin</p>
+          <p class="font-display text-3xl font-semibold text-fuchsia-400" id="statAdmins">0</p>
+        </div>
+        <div class="stat-card glass rounded-2xl p-5">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Pengguna biasa</p>
+          <p class="font-display text-3xl font-semibold text-cyan-400" id="statUsers">0</p>
+        </div>
+        <div class="stat-card glass rounded-2xl p-5">
+          <p class="text-zinc-500 text-xs font-medium mb-2">Terdaftar hari ini</p>
+          <p class="font-display text-3xl font-semibold text-emerald-400" id="statToday">0</p>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 mb-5">
+        <div class="relative flex-1">
+          <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input id="searchInput" type="text" placeholder="Cari username atau email..."
+            class="glass-input w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+        </div>
+        <select id="roleFilter" class="glass-input rounded-xl px-4 py-2.5 text-sm text-zinc-300 outline-none">
+          <option value="all">Semua peran</option>
+          <option value="admin">Admin</option>
+          <option value="user">Pengguna</option>
+        </select>
+        <button onclick="openAddModal()" class="btn-glow flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold font-display text-white whitespace-nowrap">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+          Tambah pengguna
+        </button>
+        <button id="togglePwAllBtn" onclick="handleToggleAllClick()" class="glass flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium font-display text-zinc-300 hover:text-white whitespace-nowrap transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="togglePwAllLabel">Tampilkan semua sandi</span>
+        </button>
+      </div>
+
+      <div class="glass rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/[0.06] text-left">
+                <th class="px-5 py-3.5 text-xs font-medium text-zinc-500 font-display tracking-wide">Pengguna</th>
+                <th class="px-5 py-3.5 text-xs font-medium text-zinc-500 font-display tracking-wide">Email</th>
+                <th class="px-5 py-3.5 text-xs font-medium text-zinc-500 font-display tracking-wide">Kata sandi</th>
+                <th class="px-5 py-3.5 text-xs font-medium text-zinc-500 font-display tracking-wide">Peran</th>
+                <th class="px-5 py-3.5 text-xs font-medium text-zinc-500 font-display tracking-wide">Terdaftar</th>
+                <th class="px-5 py-3.5 text-xs font-medium text-zinc-500 font-display tracking-wide text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="hidden text-center py-14 px-6">
+          <svg class="w-10 h-10 text-zinc-700 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <p class="text-zinc-400 text-sm font-medium">Tidak ada pengguna yang cocok</p>
+          <p class="text-zinc-600 text-xs mt-1">Coba ubah kata kunci pencarian atau filter peran.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ======================= GATE (kalau belum login / akses ditolak) ======================= -->
+  <div id="screenGate" class="screen relative z-10 min-h-screen items-center justify-center px-4">
+    <div class="glass rounded-3xl p-8 max-w-sm w-full text-center mx-auto my-auto">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-4 bg-rose-500/15 border border-rose-500/30">
+        <svg class="w-6 h-6 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h2 id="gateTitle" class="font-display text-lg font-semibold text-white mb-1.5">Akses terbatas</h2>
+      <p id="gateMessage" class="text-zinc-500 text-sm mb-6">Masuk dulu untuk mengakses halaman ini.</p>
+      <button onclick="goTo('auth')" class="btn-glow inline-flex w-full items-center justify-center rounded-xl py-3 text-sm font-semibold font-display text-white">Ke halaman login</button>
+    </div>
+  </div>
+
+  <!-- ======================= MODALS (dashboard admin) ======================= -->
+  <div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 modal-backdrop" onclick="if(event.target===this) closeAddModal()">
+    <div class="modal-panel glass rounded-3xl p-7 max-w-sm w-full">
+      <h3 class="font-display text-lg font-semibold text-white mb-1">Tambah pengguna</h3>
+      <p class="text-zinc-500 text-sm mb-5">Buat akun baru secara manual dari dashboard.</p>
+
+      <div class="mb-3.5">
+        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Username</label>
+        <input id="newUsername" type="text" placeholder="namamu_unik" class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+      </div>
+      <div class="mb-3.5">
+        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Email</label>
+        <input id="newEmail" type="email" placeholder="nama@email.com" class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+      </div>
+      <div class="mb-3.5">
+        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Kata sandi</label>
+        <input id="newPassword" type="text" placeholder="Minimal 6 karakter" class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+      </div>
+      <div class="mb-5">
+        <label class="block text-xs font-medium text-zinc-400 mb-1.5">Peran</label>
+        <select id="newRole" class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-zinc-200 outline-none">
+          <option value="user">Pengguna</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <p id="addModalError" class="text-rose-400 text-xs mb-3 hidden"></p>
+
+      <div class="flex gap-3">
+        <button onclick="closeAddModal()" class="flex-1 rounded-xl py-2.5 text-sm font-medium font-display text-zinc-400 hover:text-zinc-200 border border-white/10 hover:bg-white/5 transition-colors">Batal</button>
+        <button onclick="submitAddUser()" class="flex-1 btn-glow rounded-xl py-2.5 text-sm font-semibold font-display text-white">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center px-4 modal-backdrop" onclick="if(event.target===this) closeDeleteModal()">
+    <div class="modal-panel glass rounded-3xl p-7 max-w-sm w-full">
+      <div class="inline-flex items-center justify-center w-11 h-11 rounded-2xl mb-4 bg-rose-500/15 border border-rose-500/25">
+        <svg class="w-5 h-5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+      </div>
+      <h3 class="font-display text-lg font-semibold text-white mb-1.5">Hapus pengguna ini?</h3>
+      <p class="text-zinc-500 text-sm mb-6">
+        <span id="deleteTargetName" class="text-zinc-300 font-medium"></span> akan dihapus permanen dari localStorage. Tindakan ini tidak dapat dibatalkan.
+      </p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()" class="flex-1 rounded-xl py-2.5 text-sm font-medium font-display text-zinc-400 hover:text-zinc-200 border border-white/10 hover:bg-white/5 transition-colors">Batal</button>
+        <button onclick="confirmDeleteUser()" class="flex-1 rounded-xl py-2.5 text-sm font-semibold font-display text-white bg-rose-600 hover:bg-rose-500 transition-colors">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       NEXUS — single-file frontend (auth + home + admin dashboard)
+       Routing dilakukan murni via JS (tanpa reload halaman).
+       Data pengguna disimpan di SERVER (SQLite via REST API),
+       sesi login dikelola lewat cookie session di backend.
+    ========================================================= */
+
+    const API = '/api';
+    let currentUserCache = null;
+    let deleteTargetId = null;
+    let allPasswordsVisible = false;
+
+    // ---------- Fetch helpers ----------
+    async function apiCall(method, url, body) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      };
+      if (body !== undefined) opts.body = JSON.stringify(body);
+
+      let res;
+      try {
+        res = await fetch(API + url, opts);
+      } catch (err) {
+        throw { status: 0, error: 'Tidak bisa terhubung ke server. Periksa koneksi Anda.' };
+      }
+
+      let data = null;
+      try { data = await res.json(); } catch { data = null; }
+
+      if (!res.ok) {
+        throw { status: res.status, error: (data && data.error) || 'Terjadi kesalahan.' };
+      }
+      return data;
+    }
+
+    // ---------- Generic UI helpers ----------
+    function showToast(message, type = 'success') {
+      const root = document.getElementById('toast-root');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      const iconSvg = type === 'success'
+        ? `<svg class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5 success-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>`
+        : `<svg class="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>`;
+      toast.innerHTML = `${iconSvg}<span class="text-sm text-zinc-100 leading-snug">${message}</span>`;
+      root.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('leaving');
+        setTimeout(() => toast.remove(), 350);
+      }, 3200);
+    }
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str ?? '';
+      return div.innerHTML;
+    }
+    function initials(name) {
+      return (name || '?').trim().slice(0, 2).toUpperCase();
+    }
+    function formatDateOnly(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    function formatDateTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      const datePart = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      const timePart = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      return `${datePart}, ${timePart}`;
+    }
+    function isSameDay(iso) {
+      if (!iso) return false;
+      const d = new Date(iso);
+      const now = new Date();
+      return d.toDateString() === now.toDateString();
+    }
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // ---------- Router ----------
+    function setActiveScreen(id) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    async function goTo(route) {
+      if (route === 'auth') {
+        setActiveScreen('screenAuth');
+        return;
+      }
+
+      if (route === 'home') {
+        const user = await fetchCurrentUser();
+        if (!user) {
+          showGate('Belum masuk', 'Masuk ke akunmu dulu untuk membuka beranda.');
+          return;
+        }
+        renderHome(user);
+        setActiveScreen('screenHome');
+        return;
+      }
+
+      if (route === 'admin') {
+        const user = await fetchCurrentUser();
+        if (!user) {
+          showGate('Akses terbatas', 'Dashboard ini hanya bisa dibuka oleh akun dengan peran admin. Masuk dulu dengan akun admin.');
+          return;
+        }
+        if (user.role !== 'admin') {
+          showGate('Akses terbatas', 'Dashboard ini hanya bisa dibuka oleh akun dengan peran admin.');
+          return;
+        }
+        renderAdminHeader(user);
+        await renderTable();
+        setActiveScreen('screenAdmin');
+        return;
+      }
+    }
+
+    async function fetchCurrentUser() {
+      try {
+        const data = await apiCall('GET', '/me');
+        currentUserCache = data.user;
+        return data.user;
+      } catch {
+        currentUserCache = null;
+        return null;
+      }
+    }
+
+    function showGate(title, message) {
+      document.getElementById('gateTitle').textContent = title;
+      document.getElementById('gateMessage').textContent = message;
+      setActiveScreen('screenGate');
+    }
+
+    async function logout() {
+      try { await apiCall('POST', '/logout'); } catch {}
+      currentUserCache = null;
+      goTo('auth');
+      showToast('Anda telah keluar dari akun.', 'success');
+    }
+
+    // ======================= AUTH (Login / Register) =======================
+    function togglePw(id) {
+      const input = document.getElementById(id);
+      const icon = document.getElementById(id + '-icon');
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      icon.innerHTML = isHidden
+        ? `<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 4.22-5.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>`
+        : `<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/>`;
+    }
+
+    function switchTab(target) {
+      const indicator = document.getElementById('tabIndicator');
+      const tabLogin = document.getElementById('tabLogin');
+      const tabRegister = document.getElementById('tabRegister');
+      const loginPanel = document.getElementById('loginPanel');
+      const registerPanel = document.getElementById('registerPanel');
+
+      clearAuthErrors();
+
+      if (target === 'register') {
+        indicator.style.transform = 'translateX(100%)';
+        tabLogin.classList.replace('text-white', 'text-zinc-400');
+        tabRegister.classList.replace('text-zinc-400', 'text-white');
+
+        loginPanel.classList.remove('panel-active');
+        loginPanel.classList.add('panel-hidden-prev');
+        registerPanel.classList.remove('panel-hidden-next');
+        registerPanel.classList.add('panel-active');
+      } else {
+        indicator.style.transform = 'translateX(0%)';
+        tabRegister.classList.replace('text-white', 'text-zinc-400');
+        tabLogin.classList.replace('text-zinc-400', 'text-white');
+
+        registerPanel.classList.remove('panel-active');
+        registerPanel.classList.add('panel-hidden-next');
+        loginPanel.classList.remove('panel-hidden-prev');
+        loginPanel.classList.add('panel-active');
+      }
+    }
+
+    function clearAuthErrors() {
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('registerError').classList.add('hidden');
+      document.querySelectorAll('#screenAuth .glass-input').forEach(i => i.classList.remove('field-invalid'));
+    }
+    function markInvalid(...ids) {
+      ids.forEach(id => document.getElementById(id).classList.add('field-invalid'));
+    }
+    function showFieldError(elId, message) {
+      const el = document.getElementById(elId);
+      el.textContent = message;
+      el.classList.remove('hidden');
+      const form = el.closest('form');
+      form.classList.remove('shake');
+      requestAnimationFrame(() => form.classList.add('shake'));
+    }
+
+    let registerInFlight = false;
+    async function handleRegister() {
+      if (registerInFlight) return;
+      clearAuthErrors();
+
+      const usernameEl = document.getElementById('regUsername');
+      const emailEl = document.getElementById('regEmail');
+      const passwordEl = document.getElementById('regPassword');
+
+      const username = usernameEl.value.trim();
+      const email = emailEl.value.trim().toLowerCase();
+      const password = passwordEl.value;
+
+      if (!username || username.length < 3) {
+        markInvalid('regUsername');
+        showFieldError('registerError', 'Username minimal 3 karakter.');
+        return;
+      }
+      if (!email || !isValidEmail(email)) {
+        markInvalid('regEmail');
+        showFieldError('registerError', 'Masukkan alamat email yang valid.');
+        return;
+      }
+      if (!password || password.length < 6) {
+        markInvalid('regPassword');
+        showFieldError('registerError', 'Kata sandi minimal 6 karakter.');
+        return;
+      }
+
+      registerInFlight = true;
+      const btn = document.getElementById('registerSubmitBtn');
+      btn.disabled = true;
+
+      try {
+        await apiCall('POST', '/register', { username, email, password });
+
+        showToast(`Pendaftaran berhasil! Selamat datang, <b>${escapeHtml(username)}</b>.`, 'success');
+
+        usernameEl.value = '';
+        passwordEl.value = '';
+
+        setTimeout(() => {
+          switchTab('login');
+          document.getElementById('loginEmail').value = email;
+          document.getElementById('loginPassword').focus();
+        }, 900);
+      } catch (err) {
+        if (err.error && err.error.toLowerCase().includes('email')) markInvalid('regEmail');
+        if (err.error && err.error.toLowerCase().includes('username')) markInvalid('regUsername');
+        showFieldError('registerError', err.error || 'Pendaftaran gagal. Coba lagi.');
+      } finally {
+        registerInFlight = false;
+        btn.disabled = false;
+      }
+    }
+
+    let loginInFlight = false;
+    async function handleLogin() {
+      if (loginInFlight) return;
+      clearAuthErrors();
+
+      const emailEl = document.getElementById('loginEmail');
+      const passwordEl = document.getElementById('loginPassword');
+
+      const identifier = emailEl.value.trim();
+      const password = passwordEl.value;
+
+      if (!identifier) {
+        markInvalid('loginEmail');
+        showFieldError('loginError', 'Masukkan username atau email.');
+        return;
+      }
+      if (!password) {
+        markInvalid('loginPassword');
+        showFieldError('loginError', 'Kata sandi tidak boleh kosong.');
+        return;
+      }
+
+      loginInFlight = true;
+      const btn = document.getElementById('loginSubmitBtn');
+      btn.disabled = true;
+
+      try {
+        const data = await apiCall('POST', '/login', { identifier, password });
+        currentUserCache = data.user;
+        passwordEl.value = '';
+        emailEl.value = '';
+
+        showToast(`Login Berhasil! Senang melihatmu lagi, <b>${escapeHtml(data.user.username)}</b>.`, 'success');
+
+        if (data.user.role === 'admin') {
+          setTimeout(() => {
+            showToast('Mengalihkan ke dashboard admin...', 'success');
+            setTimeout(() => goTo('admin'), 600);
+          }, 450);
+        } else {
+          setTimeout(() => goTo('home'), 700);
+        }
+      } catch (err) {
+        markInvalid('loginPassword');
+        showFieldError('loginError', err.error || 'Login gagal. Coba lagi.');
+        showToast('Login gagal. Periksa data login Anda.', 'error');
+      } finally {
+        loginInFlight = false;
+        btn.disabled = false;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (!document.getElementById('screenAuth').classList.contains('active')) return;
+      const loginActive = document.getElementById('loginPanel').classList.contains('panel-active');
+      if (loginActive && document.activeElement.closest('#loginPanel')) {
+        handleLogin();
+      } else if (!loginActive && document.activeElement.closest('#registerPanel')) {
+        handleRegister();
+      }
+    });
+    document.querySelectorAll('#screenAuth .glass-input').forEach(input => {
+      input.addEventListener('input', () => input.classList.remove('field-invalid'));
+    });
+
+    // ======================= HOME (user biasa) =======================
+    function greetingByTime() {
+      const h = new Date().getHours();
+      if (h < 11) return 'Selamat pagi';
+      if (h < 15) return 'Selamat siang';
+      if (h < 18) return 'Selamat sore';
+      return 'Selamat malam';
+    }
+
+    function renderHome(user) {
+      document.getElementById('greetingTime').textContent = greetingByTime();
+      document.getElementById('greetingName').textContent = user.username;
+      document.getElementById('userNameLabel').textContent = user.username;
+      document.getElementById('userAvatar').textContent = initials(user.username);
+      document.getElementById('infoUsername').textContent = user.username;
+      document.getElementById('infoEmail').textContent = user.email;
+      document.getElementById('infoJoined').textContent = formatDateOnly(user.createdAt);
+    }
+
+    // ======================= ADMIN DASHBOARD =======================
+    function renderAdminHeader(user) {
+      document.getElementById('adminNameLabel').textContent = user.username;
+      document.getElementById('adminAvatar').textContent = initials(user.username);
+    }
+
+    function renderStats(users) {
+      document.getElementById('statTotal').textContent = users.length;
+      document.getElementById('statAdmins').textContent = users.filter(u => u.role === 'admin').length;
+      document.getElementById('statUsers').textContent = users.filter(u => u.role !== 'admin').length;
+      document.getElementById('statToday').textContent = users.filter(u => isSameDay(u.createdAt)).length;
+    }
+
+    let allUsersCache = [];
+
+    async function renderTable() {
+      try {
+        const data = await apiCall('GET', '/admin/users');
+        allUsersCache = data.users;
+      } catch (err) {
+        showToast(err.error || 'Gagal memuat data pengguna.', 'error');
+        if (err.status === 401 || err.status === 403) {
+          goTo('auth');
+        }
+        return;
+      }
+
+      renderStats(allUsersCache);
+
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const roleFilter = document.getElementById('roleFilter').value;
+
+      let filtered = allUsersCache.filter(u => {
+        const matchesQuery = !query || u.username.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+        const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+        return matchesQuery && matchesRole;
+      });
+
+      const tbody = document.getElementById('userTableBody');
+      const emptyState = document.getElementById('emptyState');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      tbody.innerHTML = filtered.map((u, i) => `
+        <tr class="row-fade border-b border-white/[0.04] last:border-0" style="animation-delay:${Math.min(i, 8) * 30}ms">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">${escapeHtml(initials(u.username))}</div>
+              <span class="text-zinc-200 font-medium">${escapeHtml(u.username)}</span>
+            </div>
+          </td>
+          <td class="px-5 py-3.5 text-zinc-400 font-mono text-xs">${escapeHtml(u.email)}</td>
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-2 font-mono text-xs text-zinc-400">
+              <span class="pw-cell select-none" data-pw="${escapeHtml(u.password)}" data-revealed="${allPasswordsVisible}">${allPasswordsVisible ? escapeHtml(u.password) : '••••••••'}</span>
+              <button onclick="togglePasswordCell(this)" class="text-zinc-500 hover:text-violet-400 transition-colors p-1 rounded hover:bg-white/5 flex-shrink-0" title="Tampilkan/sembunyikan kata sandi">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </td>
+          <td class="px-5 py-3.5">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium role-badge-${u.role === 'admin' ? 'admin' : 'user'}">${u.role === 'admin' ? 'Admin' : 'Pengguna'}</span>
+          </td>
+          <td class="px-5 py-3.5 text-zinc-500 text-xs whitespace-nowrap">${formatDateTime(u.createdAt)}</td>
+          <td class="px-5 py-3.5 text-right">
+            <button onclick="toggleRole('${u.id}')" class="text-zinc-500 hover:text-violet-400 transition-colors p-1.5 rounded-lg hover:bg-white/5 mr-1" title="Ubah peran">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M4 4l8.5 8.5"/></svg>
+            </button>
+            <button onclick="openDeleteModal('${u.id}', '${escapeHtml(u.username)}')" class="text-zinc-500 hover:text-rose-400 transition-colors p-1.5 rounded-lg hover:bg-white/5" title="Hapus pengguna">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function togglePasswordCell(btn) {
+      const cell = btn.previousElementSibling;
+      const revealed = cell.getAttribute('data-revealed') === 'true';
+      if (revealed) {
+        cell.textContent = '••••••••';
+        cell.setAttribute('data-revealed', 'false');
+      } else {
+        cell.textContent = cell.getAttribute('data-pw');
+        cell.setAttribute('data-revealed', 'true');
+      }
+    }
+
+    function toggleAllPasswords(show) {
+      document.querySelectorAll('.pw-cell').forEach(cell => {
+        if (show) {
+          cell.textContent = cell.getAttribute('data-pw');
+          cell.setAttribute('data-revealed', 'true');
+        } else {
+          cell.textContent = '••••••••';
+          cell.setAttribute('data-revealed', 'false');
+        }
+      });
+    }
+
+    function handleToggleAllClick() {
+      allPasswordsVisible = !allPasswordsVisible;
+      toggleAllPasswords(allPasswordsVisible);
+      document.getElementById('togglePwAllLabel').textContent =
+        allPasswordsVisible ? 'Sembunyikan semua sandi' : 'Tampilkan semua sandi';
+    }
+
+    async function toggleRole(id) {
+      try {
+        const data = await apiCall('PATCH', `/admin/users/${id}/role`);
+        const target = allUsersCache.find(u => u.id === id);
+        showToast(`Peran <b>${escapeHtml(target ? target.username : '')}</b> diubah menjadi ${data.role === 'admin' ? 'Admin' : 'Pengguna'}.`, 'success');
+        await renderTable();
+      } catch (err) {
+        showToast(err.error || 'Gagal mengubah peran.', 'error');
+      }
+    }
+
+    function openDeleteModal(id, username) {
+      deleteTargetId = id;
+      document.getElementById('deleteTargetName').textContent = username;
+      const modal = document.getElementById('deleteModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    function closeDeleteModal() {
+      deleteTargetId = null;
+      const modal = document.getElementById('deleteModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    async function confirmDeleteUser() {
+      if (!deleteTargetId) return;
+      try {
+        const data = await apiCall('DELETE', `/admin/users/${deleteTargetId}`);
+        showToast(`Pengguna <b>${escapeHtml(data.username || '')}</b> berhasil dihapus.`, 'success');
+        closeDeleteModal();
+
+        if (data.selfDeleted) {
+          currentUserCache = null;
+          goTo('auth');
+          return;
+        }
+        await renderTable();
+      } catch (err) {
+        showToast(err.error || 'Gagal menghapus pengguna.', 'error');
+        closeDeleteModal();
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newEmail').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newRole').value = 'user';
+      document.getElementById('addModalError').classList.add('hidden');
+      const modal = document.getElementById('addModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    function closeAddModal() {
+      const modal = document.getElementById('addModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function submitAddUser() {
+      const username = document.getElementById('newUsername').value.trim();
+      const email = document.getElementById('newEmail').value.trim().toLowerCase();
+      const password = document.getElementById('newPassword').value;
+      const role = document.getElementById('newRole').value;
+      const errorEl = document.getElementById('addModalError');
+
+      const showErr = (msg) => { errorEl.textContent = msg; errorEl.classList.remove('hidden'); };
+
+      if (!username || username.length < 3) return showErr('Username minimal 3 karakter.');
+      if (!email || !isValidEmail(email)) return showErr('Masukkan alamat email yang valid.');
+      if (!password || password.length < 6) return showErr('Kata sandi minimal 6 karakter.');
+
+      try {
+        await apiCall('POST', '/admin/users', { username, email, password, role });
+        showToast(`Pengguna <b>${escapeHtml(username)}</b> berhasil ditambahkan.`, 'success');
+        closeAddModal();
+        await renderTable();
+      } catch (err) {
+        showErr(err.error || 'Gagal menambah pengguna.');
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderTable);
+    document.getElementById('roleFilter').addEventListener('change', renderTable);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeAddModal(); closeDeleteModal(); }
+    });
+
+    // ---------- Initial route on load ----------
+    (async function init() {
+      const user = await fetchCurrentUser();
+      if (user) {
+        goTo(user.role === 'admin' ? 'admin' : 'home');
+      } else {
+        goTo('auth');
+      }
+    })();
+
+  </script>
+</body>
+</html>
