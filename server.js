@@ -317,6 +317,110 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ====================== EPISODE ROUTES (video yang admin upload sendiri) ======================
+// Setiap episode terhubung ke satu judul anime (diidentifikasi lewat anime_mal_id dari Jikan API).
+// Poster & metadata anime diambil langsung dari Jikan di sisi frontend — kita hanya simpan
+// videoUrl + info ringkas yang perlu ditampilkan di halaman tonton.
+
+// Lihat semua episode untuk satu anime tertentu (siapa pun yang sudah login boleh lihat)
+app.get('/api/episodes', requireAuth, async (req, res) => {
+  const malId = parseInt(req.query.malId, 10);
+  try {
+    let result;
+    if (malId) {
+      result = await pool.query(
+        'SELECT * FROM episodes WHERE anime_mal_id = $1 ORDER BY episode_number ASC',
+        [malId]
+      );
+    } else {
+      result = await pool.query('SELECT * FROM episodes ORDER BY created_at DESC');
+    }
+    const episodes = result.rows.map(e => ({
+      id: e.id,
+      animeMalId: e.anime_mal_id,
+      animeTitle: e.anime_title,
+      animePoster: e.anime_poster,
+      episodeNumber: e.episode_number,
+      episodeTitle: e.episode_title,
+      videoUrl: e.video_url,
+      createdAt: e.created_at
+    }));
+    res.json({ episodes });
+  } catch (err) {
+    console.error('List episodes error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// Daftar anime unik yang sudah punya episode (untuk ditampilkan di grid "tersedia untuk ditonton")
+app.get('/api/episodes/anime-list', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT anime_mal_id, anime_title, anime_poster, COUNT(*)::int AS episode_count, MAX(created_at) AS last_added
+      FROM episodes
+      GROUP BY anime_mal_id, anime_title, anime_poster
+      ORDER BY last_added DESC
+    `);
+    const animeList = rows.map(r => ({
+      malId: r.anime_mal_id,
+      title: r.anime_title,
+      poster: r.anime_poster,
+      episodeCount: r.episode_count
+    }));
+    res.json({ animeList });
+  } catch (err) {
+    console.error('Anime list error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// Tambah episode baru (admin only) — videoUrl harus link ke video yang sudah di-hosting sendiri
+app.post('/api/admin/episodes', requireAdmin, async (req, res) => {
+  const { animeMalId, animeTitle, animePoster, episodeNumber, episodeTitle, videoUrl } = req.body || {};
+
+  const cleanAnimeTitle = (animeTitle || '').trim();
+  const cleanVideoUrl = (videoUrl || '').trim();
+  const malId = parseInt(animeMalId, 10);
+  const epNum = parseInt(episodeNumber, 10);
+
+  if (!malId) {
+    return res.status(400).json({ error: 'Anime belum dipilih.' });
+  }
+  if (!cleanAnimeTitle) {
+    return res.status(400).json({ error: 'Judul anime tidak boleh kosong.' });
+  }
+  if (!epNum || epNum < 1) {
+    return res.status(400).json({ error: 'Nomor episode harus berupa angka lebih dari 0.' });
+  }
+  if (!cleanVideoUrl) {
+    return res.status(400).json({ error: 'URL video tidak boleh kosong.' });
+  }
+
+  try {
+    const id = genId();
+    await pool.query(
+      `INSERT INTO episodes (id, anime_mal_id, anime_title, anime_poster, episode_number, episode_title, video_url, added_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())`,
+      [id, malId, cleanAnimeTitle, (animePoster || '').trim(), epNum, (episodeTitle || '').trim(), cleanVideoUrl, req.currentUser.id]
+    );
+    res.json({ ok: true, id });
+  } catch (err) {
+    console.error('Add episode error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// Hapus episode (admin only)
+app.delete('/api/admin/episodes/:id', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM episodes WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete episode error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
 // Fallback: serve index.html untuk semua route non-API (single page app)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
