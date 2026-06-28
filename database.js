@@ -29,6 +29,33 @@ async function ensureSchema() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS episodes (
+        id TEXT PRIMARY KEY,
+        anime_mal_id INTEGER NOT NULL,
+        anime_title TEXT NOT NULL,
+        anime_poster TEXT,
+        episode_number INTEGER NOT NULL,
+        episode_title TEXT,
+        video_url TEXT NOT NULL,
+        added_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS videos (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        cover_url TEXT NOT NULL DEFAULT '',
+        video_url TEXT NOT NULL,
+        genre TEXT NOT NULL DEFAULT '',
+        added_by TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+
     // Seed akun admin default: Xiaoli / 0507 (hanya jika belum ada)
     const existing = await pool.query(
       'SELECT id FROM users WHERE LOWER(username) = $1',
