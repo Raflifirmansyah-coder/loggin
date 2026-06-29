@@ -652,27 +652,54 @@
 
         <div class="glass rounded-2xl p-6 mb-6">
           <h3 class="font-display text-base font-semibold text-white mb-1">Tambah episode baru</h3>
-          <p class="text-zinc-500 text-sm mb-5">Cari anime dari MyAnimeList, lalu tempel link video yang sudah kamu hosting sendiri.</p>
+          <p class="text-zinc-500 text-sm mb-5">Cari anime dari MyAnimeList, atau isi manual kalau judulnya tidak ditemukan (umum terjadi untuk donghua).</p>
 
-          <div class="mb-4">
-            <label class="block text-xs font-medium text-zinc-400 mb-1.5">Cari anime</label>
-            <div class="relative">
-              <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <input id="episodeAnimeSearch" type="text" placeholder="Ketik judul anime..."
-                class="glass-input w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
-            </div>
-            <div id="episodeAnimeResults" class="mt-2 max-h-64 overflow-y-auto rounded-xl border border-white/5 hidden"></div>
+          <div class="glass rounded-xl p-1 mb-5 inline-flex gap-1">
+            <button id="animeModeSearchBtn" onclick="switchAnimeInputMode('search')" class="px-4 py-1.5 rounded-lg text-xs font-medium font-display text-white bg-gradient-to-br from-violet-600 to-fuchsia-600">Cari dari MyAnimeList</button>
+            <button id="animeModeManualBtn" onclick="switchAnimeInputMode('manual')" class="px-4 py-1.5 rounded-lg text-xs font-medium font-display text-zinc-400 hover:text-white transition-colors">Input manual</button>
           </div>
 
-          <div id="episodeSelectedAnime" class="hidden mb-4 flex items-center gap-3 glass rounded-xl p-3">
-            <img id="episodeSelectedPoster" class="w-12 h-16 object-cover rounded-lg flex-shrink-0" alt="">
-            <div class="flex-1 min-w-0">
-              <p id="episodeSelectedTitle" class="text-white text-sm font-medium truncate"></p>
-              <p class="text-zinc-500 text-xs">Anime terpilih</p>
+          <!-- Mode: cari dari Jikan -->
+          <div id="animeModeSearch">
+            <div class="mb-4">
+              <label class="block text-xs font-medium text-zinc-400 mb-1.5">Cari anime</label>
+              <div class="relative">
+                <svg class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input id="episodeAnimeSearch" type="text" placeholder="Ketik judul anime..."
+                  class="glass-input w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+              </div>
+              <div id="episodeAnimeResults" class="mt-2 max-h-64 overflow-y-auto rounded-xl border border-white/5 hidden"></div>
             </div>
-            <button onclick="clearSelectedAnime()" class="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 flex-shrink-0">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
+
+            <div id="episodeSelectedAnime" class="hidden mb-4 flex items-center gap-3 glass rounded-xl p-3">
+              <img id="episodeSelectedPoster" class="w-12 h-16 object-cover rounded-lg flex-shrink-0" alt="">
+              <div class="flex-1 min-w-0">
+                <p id="episodeSelectedTitle" class="text-white text-sm font-medium truncate"></p>
+                <p class="text-zinc-500 text-xs">Anime terpilih</p>
+              </div>
+              <button onclick="clearSelectedAnime()" class="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/5 flex-shrink-0">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mode: input manual -->
+          <div id="animeModeManual" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">Judul donghua/anime</label>
+                <input id="manualAnimeTitle" type="text" placeholder="contoh: Battle Through The Heavens"
+                  class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-zinc-400 mb-1.5">URL poster (opsional)</label>
+                <input id="manualAnimePoster" type="text" placeholder="https://contoh.com/poster.jpg"
+                  class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+              </div>
+            </div>
+            <div id="manualPosterPreview" class="hidden mb-4">
+              <img id="manualPosterPreviewImg" class="w-16 h-22 object-cover rounded-lg border border-white/10" alt="Preview poster">
+            </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -1291,14 +1318,32 @@
       await goTo('detail');
       renderDetailLoading();
 
-      try {
-        const [animeRes, episodesData] = await Promise.all([
-          fetch(`${JIKAN_BASE}/anime/${malId}/full`).then(r => r.ok ? r.json() : Promise.reject(new Error('Jikan error'))),
-          apiCall('GET', `/episodes?malId=${malId}`).catch(() => ({ episodes: [] }))
-        ]);
+      const isManualAnime = malId < 0; // ID sintetis dari hashTitleToId() — tidak ada di Jikan
 
-        currentDetailAnime = animeRes.data;
+      try {
+        const episodesData = await apiCall('GET', `/episodes?malId=${malId}`).catch(() => ({ episodes: [] }));
         currentDetailEpisodes = episodesData.episodes || [];
+
+        if (isManualAnime) {
+          // Anime manual: tidak ada data Jikan, susun objek "anime" minimal dari info episode yang tersimpan.
+          const firstEp = currentDetailEpisodes[0];
+          currentDetailAnime = {
+            title: firstEp?.animeTitle || 'Anime',
+            images: { jpg: { image_url: firstEp?.animePoster || '', large_image_url: firstEp?.animePoster || '' } },
+            synopsis: null,
+            genres: [],
+            score: null,
+            status: null,
+            episodes: null,
+            type: null,
+            _isManual: true
+          };
+        } else {
+          const animeRes = await fetch(`${JIKAN_BASE}/anime/${malId}/full`)
+            .then(r => r.ok ? r.json() : Promise.reject(new Error('Jikan error')));
+          currentDetailAnime = animeRes.data;
+        }
+
         renderDetailContent();
       } catch (err) {
         renderDetailError();
@@ -1362,6 +1407,7 @@
       const synopsis = anime.synopsis || 'Sinopsis tidak tersedia.';
       const hasEpisodes = currentDetailEpisodes.length > 0;
       const activeEp = hasEpisodes ? currentDetailEpisodes[0] : null;
+      const isManual = !!anime._isManual;
 
       document.getElementById('detailContent').innerHTML = `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1395,14 +1441,19 @@
               <h2 class="font-display text-lg font-semibold text-white mb-1">${escapeHtml(anime.title)}</h2>
             `}
 
-            <h3 class="font-display text-sm font-medium text-zinc-400 mb-2 tracking-wide mt-2">SINOPSIS</h3>
-            <p class="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">${escapeHtml(synopsis)}</p>
+            ${isManual ? `
+              <p class="text-zinc-600 text-xs mt-2">Judul ini ditambahkan secara manual dan tidak terdaftar di MyAnimeList, sehingga sinopsis dan detail lain tidak tersedia.</p>
+            ` : `
+              <h3 class="font-display text-sm font-medium text-zinc-400 mb-2 tracking-wide mt-2">SINOPSIS</h3>
+              <p class="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">${escapeHtml(synopsis)}</p>
+            `}
           </div>
 
           <div>
             <div class="anime-card-poster mb-4" style="cursor:default; max-width:240px; margin-inline:auto;">
               ${poster ? `<img src="${poster}" alt="${escapeHtml(anime.title)}">` : ''}
             </div>
+            ${isManual ? '' : `
             <div class="glass rounded-2xl p-5 space-y-3 text-sm">
               <div class="flex justify-between"><span class="text-zinc-500">Skor</span><span class="text-white font-medium">${anime.score ?? '—'}</span></div>
               <div class="flex justify-between"><span class="text-zinc-500">Status</span><span class="text-white font-medium">${escapeHtml(anime.status || '—')}</span></div>
@@ -1413,6 +1464,7 @@
                 <span class="text-white text-sm">${escapeHtml(genres)}</span>
               </div>
             </div>
+            `}
           </div>
 
         </div>
@@ -1666,6 +1718,55 @@
     // ======================= ADMIN: KELOLA EPISODE =======================
     let episodeSearchDebounce = null;
     let selectedAnimeForEpisode = null; // { malId, title, poster }
+    let animeInputMode = 'search'; // 'search' atau 'manual'
+
+    function switchAnimeInputMode(mode) {
+      animeInputMode = mode;
+      const searchBtn = document.getElementById('animeModeSearchBtn');
+      const manualBtn = document.getElementById('animeModeManualBtn');
+      const searchPanel = document.getElementById('animeModeSearch');
+      const manualPanel = document.getElementById('animeModeManual');
+
+      if (mode === 'manual') {
+        manualBtn.classList.add('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
+        manualBtn.classList.remove('text-zinc-400');
+        searchBtn.classList.remove('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
+        searchBtn.classList.add('text-zinc-400');
+        manualPanel.classList.remove('hidden');
+        searchPanel.classList.add('hidden');
+      } else {
+        searchBtn.classList.add('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
+        searchBtn.classList.remove('text-zinc-400');
+        manualBtn.classList.remove('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
+        manualBtn.classList.add('text-zinc-400');
+        searchPanel.classList.remove('hidden');
+        manualPanel.classList.add('hidden');
+      }
+    }
+
+    // Menghasilkan ID angka yang konsisten dari sebuah judul (hash sederhana),
+    // dipakai sebagai malId sintetis untuk anime yang diinput manual (bukan dari Jikan).
+    // Selalu negatif agar tidak pernah bertabrakan dengan mal_id asli dari Jikan (yang selalu positif).
+    function hashTitleToId(title) {
+      let hash = 0;
+      const normalized = title.trim().toLowerCase();
+      for (let i = 0; i < normalized.length; i++) {
+        hash = (hash * 31 + normalized.charCodeAt(i)) | 0;
+      }
+      return -Math.abs(hash || 1);
+    }
+
+    document.getElementById('manualAnimePoster').addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      const preview = document.getElementById('manualPosterPreview');
+      const img = document.getElementById('manualPosterPreviewImg');
+      if (url) {
+        img.src = url;
+        preview.classList.remove('hidden');
+      } else {
+        preview.classList.add('hidden');
+      }
+    });
 
     document.getElementById('episodeAnimeSearch').addEventListener('input', (e) => {
       clearTimeout(episodeSearchDebounce);
@@ -1721,7 +1822,17 @@
 
       const showErr = (msg) => { errorEl.textContent = msg; errorEl.classList.remove('hidden'); };
 
-      if (!selectedAnimeForEpisode) return showErr('Pilih anime dari hasil pencarian dulu.');
+      let animeData; // { malId, title, poster }
+
+      if (animeInputMode === 'manual') {
+        const manualTitle = document.getElementById('manualAnimeTitle').value.trim();
+        const manualPoster = document.getElementById('manualAnimePoster').value.trim();
+        if (!manualTitle) return showErr('Isi judul donghua/anime dulu.');
+        animeData = { malId: hashTitleToId(manualTitle), title: manualTitle, poster: manualPoster };
+      } else {
+        if (!selectedAnimeForEpisode) return showErr('Pilih anime dari hasil pencarian dulu, atau pindah ke tab "Input manual".');
+        animeData = selectedAnimeForEpisode;
+      }
 
       const episodeNumber = document.getElementById('episodeNumberInput').value.trim();
       const episodeTitle = document.getElementById('episodeTitleInput').value.trim();
@@ -1732,17 +1843,20 @@
 
       try {
         await apiCall('POST', '/admin/episodes', {
-          animeMalId: selectedAnimeForEpisode.malId,
-          animeTitle: selectedAnimeForEpisode.title,
-          animePoster: selectedAnimeForEpisode.poster,
+          animeMalId: animeData.malId,
+          animeTitle: animeData.title,
+          animePoster: animeData.poster,
           episodeNumber: parseInt(episodeNumber, 10),
           episodeTitle,
           videoUrl
         });
 
-        showToast(`Episode ${episodeNumber} untuk <b>${escapeHtml(selectedAnimeForEpisode.title)}</b> berhasil ditambahkan.`, 'success');
+        showToast(`Episode ${episodeNumber} untuk <b>${escapeHtml(animeData.title)}</b> berhasil ditambahkan.`, 'success');
 
         clearSelectedAnime();
+        document.getElementById('manualAnimeTitle').value = '';
+        document.getElementById('manualAnimePoster').value = '';
+        document.getElementById('manualPosterPreview').classList.add('hidden');
         document.getElementById('episodeNumberInput').value = '';
         document.getElementById('episodeTitleInput').value = '';
         document.getElementById('episodeVideoUrlInput').value = '';
