@@ -282,7 +282,8 @@
     background: #000;
     border: 1px solid rgba(255,255,255,0.08);
   }
-  .video-player-wrap video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .video-player-wrap video,
+  .video-player-wrap iframe { width: 100%; height: 100%; object-fit: contain; background: #000; border: none; }
   .ep-chip {
     transition: all 0.2s ease;
   }
@@ -689,9 +690,9 @@
 
           <div class="mb-4">
             <label class="block text-xs font-medium text-zinc-400 mb-1.5">URL video</label>
-            <input id="episodeVideoUrlInput" type="text" placeholder="https://contoh.com/video.mp4"
+            <input id="episodeVideoUrlInput" type="text" placeholder="https://www.dailymotion.com/video/x4wgaqe atau https://contoh.com/video.mp4"
               class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
-            <p class="text-zinc-600 text-xs mt-1.5">Link langsung ke file video (.mp4, dll) yang sudah kamu upload ke hosting sendiri.</p>
+            <p class="text-zinc-600 text-xs mt-1.5">Tempel link Dailymotion (video milikmu sendiri), atau link langsung ke file video (.mp4, dll) yang sudah kamu hosting sendiri.</p>
           </div>
 
           <p id="episodeFormError" class="text-rose-400 text-xs mb-3 hidden"></p>
@@ -1321,6 +1322,39 @@
       `;
     }
 
+    // Mendeteksi apakah videoUrl mengarah ke Dailymotion (URL penuh atau video ID polos),
+    // lalu mengembalikan video ID-nya saja. Mengembalikan null jika bukan Dailymotion.
+    function extractDailymotionId(input) {
+      if (!input) return null;
+      const trimmed = input.trim();
+
+      // Format URL: https://www.dailymotion.com/video/x4wgaqe (opsional query/hash di belakang)
+      const urlMatch = trimmed.match(/dailymotion\.com\/(?:embed\/)?video\/([a-zA-Z0-9]+)/i);
+      if (urlMatch) return urlMatch[1];
+
+      // Format short link: https://dai.ly/x4wgaqe
+      const shortMatch = trimmed.match(/dai\.ly\/([a-zA-Z0-9]+)/i);
+      if (shortMatch) return shortMatch[1];
+
+      // Format ID polos: biasanya diawali huruf "x" diikuti karakter alfanumerik, tanpa spasi/slash
+      const idOnlyMatch = trimmed.match(/^x[a-zA-Z0-9]{5,}$/);
+      if (idOnlyMatch) return trimmed;
+
+      return null;
+    }
+
+    // Menghasilkan markup HTML player yang sesuai: iframe Dailymotion, atau <video> tag biasa.
+    function buildPlayerMarkup(videoUrl, poster) {
+      const dmId = extractDailymotionId(videoUrl);
+      if (dmId) {
+        return `<iframe id="mainVideoPlayer" data-player-type="dailymotion"
+          src="https://www.dailymotion.com/embed/video/${encodeURIComponent(dmId)}"
+          allow="autoplay; fullscreen" allowfullscreen frameborder="0"
+          style="width:100%;height:100%;"></iframe>`;
+      }
+      return `<video id="mainVideoPlayer" data-player-type="native" controls poster="${escapeHtml(poster)}" src="${escapeHtml(videoUrl)}"></video>`;
+    }
+
     function renderDetailContent() {
       const anime = currentDetailAnime;
       const poster = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || '';
@@ -1335,7 +1369,7 @@
           <div class="lg:col-span-2">
             ${hasEpisodes ? `
               <div class="video-player-wrap mb-4">
-                <video id="mainVideoPlayer" controls poster="${poster}" src="${escapeHtml(activeEp.videoUrl)}"></video>
+                ${buildPlayerMarkup(activeEp.videoUrl, poster)}
               </div>
               <div class="flex items-center justify-between mb-2">
                 <h2 class="font-display text-lg font-semibold text-white">${escapeHtml(anime.title)}</h2>
@@ -1388,9 +1422,13 @@
     function playEpisode(index) {
       const ep = currentDetailEpisodes[index];
       if (!ep) return;
-      const player = document.getElementById('mainVideoPlayer');
-      player.src = ep.videoUrl;
-      player.play().catch(() => {});
+
+      const poster = currentDetailAnime?.images?.jpg?.large_image_url || currentDetailAnime?.images?.jpg?.image_url || '';
+      const wrap = document.querySelector('.video-player-wrap');
+      if (wrap) {
+        wrap.innerHTML = buildPlayerMarkup(ep.videoUrl, poster);
+      }
+
       document.getElementById('nowPlayingLabel').textContent =
         `Episode ${ep.episodeNumber}${ep.episodeTitle ? ' — ' + ep.episodeTitle : ''}`;
       document.querySelectorAll('.ep-chip').forEach((chip, i) => {
