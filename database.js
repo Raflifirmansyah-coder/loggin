@@ -29,6 +29,25 @@ async function ensureSchema() {
       )
     `);
 
+    // Kolom profil tambahan — pakai ALTER TABLE ADD COLUMN IF NOT EXISTS supaya aman
+    // dijalankan berkali-kali tanpa error, termasuk pada database yang sudah berjalan
+    // dan sudah punya data user sebelum kolom-kolom ini ditambahkan.
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT ''`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT ''`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_color TEXT NOT NULL DEFAULT 'violet'`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY,
+        anime_mal_id INTEGER NOT NULL,
+        anime_title TEXT NOT NULL,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_comments_anime ON comments(anime_mal_id)`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS episodes (
         id TEXT PRIMARY KEY,
