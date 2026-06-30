@@ -421,6 +421,40 @@ app.delete('/api/admin/episodes/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ====================== SETTINGS ROUTES ======================
+
+// Ambil settings app (publik — dipakai frontend untuk tahu username Dailymotion)
+app.get('/api/settings', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT key, value FROM app_settings');
+    const settings = {};
+    rows.forEach(r => { settings[r.key] = r.value; });
+    res.json({ settings });
+  } catch (err) {
+    console.error('Get settings error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// Simpan/update settings (admin only)
+app.post('/api/admin/settings', requireAdmin, async (req, res) => {
+  const { key, value } = req.body || {};
+  if (!key || typeof value === 'undefined') {
+    return res.status(400).json({ error: 'Key dan value harus diisi.' });
+  }
+  try {
+    await pool.query(`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES ($1, $2, now())
+      ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = now()
+    `, [key, value]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Save settings error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
 // Fallback: serve index.html untuk semua route non-API (single page app)
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
