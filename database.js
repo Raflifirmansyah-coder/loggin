@@ -56,6 +56,14 @@ async function ensureSchema() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+
     // Seed akun admin default: Xiaoli / 0507 (hanya jika belum ada)
     const existing = await pool.query(
       'SELECT id FROM users WHERE LOWER(username) = $1',
