@@ -1900,7 +1900,7 @@
 
         meta.textContent = `${videos.length} video dari channel`;
         grid.innerHTML = videos.map(v => `
-          <div class="dm-card" onclick="openDMVideo('${v.id}', ${JSON.stringify(v.title)}, ${JSON.stringify(v.description || '')})">
+          <div class="dm-card" data-video-id="${escapeHtml(v.id)}" data-video-title="${escapeHtml(v.title || '')}" data-video-desc="${escapeHtml(v.description || '')}">
             <div class="dm-card-thumb">
               ${v.thumbnail_360_url ? `<img src="${v.thumbnail_360_url}" alt="${escapeHtml(v.title)}" loading="lazy">` : `<div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs">No thumbnail</div>`}
               <div class="dm-card-play">
@@ -1926,6 +1926,17 @@
       document.getElementById('dmDirectPlayer').src =
         `https://www.dailymotion.com/embed/video/${encodeURIComponent(videoId)}?autoplay=1`;
     }
+
+    // Event delegation untuk klik card video DM — dipasang sekali, otomatis berlaku
+    // untuk semua card meski grid-nya dirender ulang berkali-kali (innerHTML diganti).
+    document.getElementById('dmChannelGrid').addEventListener('click', (e) => {
+      const card = e.target.closest('.dm-card');
+      if (!card) return;
+      const videoId = card.getAttribute('data-video-id');
+      const title = card.getAttribute('data-video-title');
+      const desc = card.getAttribute('data-video-desc');
+      openDMVideo(videoId, title, desc);
+    });
 
 
     let episodeSearchDebounce = null;
