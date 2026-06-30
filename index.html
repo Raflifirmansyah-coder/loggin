@@ -293,6 +293,30 @@
     border-color: transparent;
   }
 
+  .dm-card {
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .dm-card:hover { transform: translateY(-3px); }
+  .dm-card-thumb {
+    position: relative;
+    aspect-ratio: 16/9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 8px;
+  }
+  .dm-card-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease, filter 0.3s ease; }
+  .dm-card:hover .dm-card-thumb img { transform: scale(1.05); filter: brightness(0.7); }
+  .dm-card-play {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.25s ease;
+  }
+  .dm-card:hover .dm-card-play { opacity: 1; }
+  .dm-card-title { font-size: 12px; color: #a1a1aa; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
   /* ---------- Dashboard ---------- */
   .row-fade { animation: rowIn 0.35s ease forwards; }
   @keyframes rowIn {
@@ -501,6 +525,21 @@
         <div id="watchableGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4"></div>
       </div>
 
+      <!-- Video dari channel Dailymotion -->
+      <div id="dmChannelSection" class="mb-10 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display text-lg font-semibold text-white">📺 Channel Kami</h3>
+          <span class="text-xs text-zinc-500" id="dmChannelMeta"></span>
+        </div>
+        <div id="dmChannelGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+        <div id="dmChannelLoading" class="flex items-center justify-center py-10 hidden">
+          <div class="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <div id="dmChannelError" class="hidden text-center py-10">
+          <p class="text-zinc-500 text-xs">Gagal memuat video dari channel. Coba lagi nanti.</p>
+        </div>
+      </div>
+
       <!-- Grid utama hasil browse / search -->
       <div>
         <div class="flex items-center justify-between mb-4">
@@ -546,6 +585,31 @@
     </main>
   </div>
 
+  <!-- ======================= SCREEN: DM VIDEO PLAYER (video dari channel Dailymotion) ======================= -->
+  <div id="screenDMPlayer" class="screen relative z-10 min-h-screen">
+
+    <header class="border-b border-white/[0.06] sticky top-0 z-30 backdrop-blur-xl bg-[#0A0A0F]/70">
+      <div class="max-w-7xl mx-auto px-5 md:px-8 py-4 flex items-center gap-4">
+        <button onclick="goTo('home')" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Kembali
+        </button>
+        <h1 class="font-display text-base font-semibold text-white leading-none truncate flex-1" id="dmPlayerTitle">Menonton...</h1>
+        <button onclick="logout()" class="text-sm text-zinc-400 hover:text-rose-400 transition-colors p-2 rounded-lg hover:bg-white/5 flex-shrink-0">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-5 md:px-8 py-8">
+      <div class="video-player-wrap mb-5">
+        <iframe id="dmDirectPlayer" src="" allow="autoplay; fullscreen" allowfullscreen frameborder="0" style="width:100%;height:100%;"></iframe>
+      </div>
+      <h2 id="dmPlayerVideoTitle" class="font-display text-lg font-semibold text-white mb-1"></h2>
+      <p id="dmPlayerVideoDesc" class="text-zinc-500 text-sm leading-relaxed"></p>
+    </main>
+  </div>
+
   <!-- ======================= SCREEN: ADMIN DASHBOARD ======================= -->
   <div id="screenAdmin" class="screen relative z-10 min-h-screen">
 
@@ -578,6 +642,7 @@
       <div class="glass rounded-2xl p-1.5 mb-7 inline-flex gap-1">
         <button id="adminTabUsers" onclick="switchAdminTab('users')" class="px-5 py-2 rounded-xl text-sm font-medium font-display text-white bg-gradient-to-br from-violet-600 to-fuchsia-600">Pengguna</button>
         <button id="adminTabEpisodes" onclick="switchAdminTab('episodes')" class="px-5 py-2 rounded-xl text-sm font-medium font-display text-zinc-400 hover:text-white transition-colors">Episode</button>
+        <button id="adminTabSettings" onclick="switchAdminTab('settings')" class="px-5 py-2 rounded-xl text-sm font-medium font-display text-zinc-400 hover:text-white transition-colors">⚙️ Settings</button>
       </div>
 
       <!-- ---- Panel: Kelola Pengguna ---- -->
@@ -751,6 +816,32 @@
         </div>
       </div>
 
+      <!-- ---- Panel: Settings ---- -->
+      <div id="adminPanelSettings" class="hidden">
+        <div class="glass rounded-2xl p-6 max-w-lg">
+          <h3 class="font-display text-base font-semibold text-white mb-1">Channel Dailymotion</h3>
+          <p class="text-zinc-500 text-sm mb-5">Isi username Dailymotion channel kamu. Semua video publik dari channel itu akan otomatis ditampilkan di halaman utama user di section "Channel Kami".</p>
+
+          <div class="mb-3">
+            <label class="block text-xs font-medium text-zinc-400 mb-1.5">Username Dailymotion</label>
+            <div class="flex gap-2">
+              <input id="settingsDMUsername" type="text" placeholder="contoh: namaChannelmu"
+                class="glass-input flex-1 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+              <button onclick="saveDMUsername()" class="btn-glow rounded-xl px-4 py-2.5 text-sm font-semibold font-display text-white whitespace-nowrap">Simpan</button>
+            </div>
+            <p class="text-zinc-600 text-xs mt-1.5">Format URL channel: dailymotion.com/<b>username</b></p>
+          </div>
+
+          <div id="settingsDMPreview" class="hidden mt-4 p-3 glass rounded-xl">
+            <p class="text-zinc-500 text-xs mb-1">Channel aktif saat ini:</p>
+            <p id="settingsDMCurrentValue" class="text-violet-400 text-sm font-medium"></p>
+          </div>
+
+          <p id="settingsError" class="text-rose-400 text-xs mt-3 hidden"></p>
+          <p id="settingsSuccess" class="text-emerald-400 text-xs mt-3 hidden"></p>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -920,6 +1011,9 @@
           showGate('Belum masuk', 'Masuk ke akunmu dulu untuk membuka beranda.');
           return;
         }
+        // Stop video DM kalau sebelumnya sedang putar
+        const iframe = document.getElementById('dmDirectPlayer');
+        if (iframe) iframe.src = '';
         renderHome(user);
         setActiveScreen('screenHome');
         return;
@@ -932,6 +1026,19 @@
           return;
         }
         setActiveScreen('screenDetail');
+        return;
+      }
+
+      if (route === 'dmplayer') {
+        const user = await fetchCurrentUser();
+        if (!user) {
+          showGate('Belum masuk', 'Masuk ke akunmu dulu untuk membuka halaman ini.');
+          return;
+        }
+        // Reset player saat navigasi ke sini
+        const iframe = document.getElementById('dmDirectPlayer');
+        if (iframe) iframe.src = '';
+        setActiveScreen('screenDMPlayer');
         return;
       }
 
@@ -1171,6 +1278,7 @@
       document.getElementById('animeSearchInput').value = '';
       currentSearchQuery = '';
       loadWatchableSection();
+      loadDMChannelSection();
       loadBrowseGrid();
     }
 
@@ -1690,32 +1798,136 @@
 
     // ======================= ADMIN: TAB SWITCHING =======================
     function switchAdminTab(tab) {
-      const tabUsers = document.getElementById('adminTabUsers');
-      const tabEpisodes = document.getElementById('adminTabEpisodes');
-      const panelUsers = document.getElementById('adminPanelUsers');
-      const panelEpisodes = document.getElementById('adminPanelEpisodes');
+      const tabs = {
+        users: document.getElementById('adminTabUsers'),
+        episodes: document.getElementById('adminTabEpisodes'),
+        settings: document.getElementById('adminTabSettings')
+      };
+      const panels = {
+        users: document.getElementById('adminPanelUsers'),
+        episodes: document.getElementById('adminPanelEpisodes'),
+        settings: document.getElementById('adminPanelSettings')
+      };
 
-      if (tab === 'episodes') {
-        tabEpisodes.classList.add('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
-        tabEpisodes.classList.remove('text-zinc-400');
-        tabUsers.classList.remove('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
-        tabUsers.classList.add('text-zinc-400');
+      // Reset semua tab dan panel
+      Object.values(tabs).forEach(t => {
+        t.classList.remove('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
+        t.classList.add('text-zinc-400');
+      });
+      Object.values(panels).forEach(p => p.classList.add('hidden'));
 
-        panelUsers.classList.add('hidden');
-        panelEpisodes.classList.remove('hidden');
-        renderEpisodeTable();
-      } else {
-        tabUsers.classList.add('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
-        tabUsers.classList.remove('text-zinc-400');
-        tabEpisodes.classList.remove('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
-        tabEpisodes.classList.add('text-zinc-400');
+      // Aktifkan yang dipilih
+      tabs[tab].classList.add('bg-gradient-to-br', 'from-violet-600', 'to-fuchsia-600', 'text-white');
+      tabs[tab].classList.remove('text-zinc-400');
+      panels[tab].classList.remove('hidden');
 
-        panelEpisodes.classList.add('hidden');
-        panelUsers.classList.remove('hidden');
+      if (tab === 'episodes') renderEpisodeTable();
+      if (tab === 'settings') loadSettingsPanel();
+    }
+
+    // ======================= ADMIN: SETTINGS (Dailymotion Channel) =======================
+    async function loadSettingsPanel() {
+      try {
+        const data = await apiCall('GET', '/settings');
+        const username = data.settings?.dm_username || '';
+        if (username) {
+          document.getElementById('settingsDMUsername').value = username;
+          document.getElementById('settingsDMCurrentValue').textContent = `dailymotion.com/${username}`;
+          document.getElementById('settingsDMPreview').classList.remove('hidden');
+        }
+      } catch {}
+    }
+
+    async function saveDMUsername() {
+      const username = document.getElementById('settingsDMUsername').value.trim();
+      const errEl = document.getElementById('settingsError');
+      const okEl = document.getElementById('settingsSuccess');
+      errEl.classList.add('hidden');
+      okEl.classList.add('hidden');
+
+      if (!username) {
+        errEl.textContent = 'Username tidak boleh kosong.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        await apiCall('POST', '/admin/settings', { key: 'dm_username', value: username });
+        document.getElementById('settingsDMCurrentValue').textContent = `dailymotion.com/${username}`;
+        document.getElementById('settingsDMPreview').classList.remove('hidden');
+        okEl.textContent = 'Berhasil disimpan! Channel akan otomatis tampil di halaman utama user.';
+        okEl.classList.remove('hidden');
+        showToast('Username Dailymotion berhasil disimpan.', 'success');
+      } catch (err) {
+        errEl.textContent = err.error || 'Gagal menyimpan.';
+        errEl.classList.remove('hidden');
       }
     }
 
-    // ======================= ADMIN: KELOLA EPISODE =======================
+    // ======================= HOME: LOAD DM CHANNEL VIDEOS =======================
+    async function loadDMChannelSection() {
+      const section = document.getElementById('dmChannelSection');
+      const grid = document.getElementById('dmChannelGrid');
+      const loading = document.getElementById('dmChannelLoading');
+      const errorEl = document.getElementById('dmChannelError');
+      const meta = document.getElementById('dmChannelMeta');
+
+      try {
+        const settingsData = await apiCall('GET', '/settings');
+        const username = settingsData.settings?.dm_username || '';
+        if (!username) {
+          section.classList.add('hidden');
+          return;
+        }
+
+        section.classList.remove('hidden');
+        loading.classList.remove('hidden');
+        grid.innerHTML = '';
+        errorEl.classList.add('hidden');
+
+        const res = await fetch(
+          `https://api.dailymotion.com/user/${encodeURIComponent(username)}/videos?fields=id,title,thumbnail_360_url,description&limit=50&sort=recent`
+        );
+        if (!res.ok) throw new Error('DM API error');
+        const json = await res.json();
+        loading.classList.add('hidden');
+
+        const videos = json.list || [];
+        if (videos.length === 0) {
+          section.classList.add('hidden');
+          return;
+        }
+
+        meta.textContent = `${videos.length} video dari channel`;
+        grid.innerHTML = videos.map(v => `
+          <div class="dm-card" onclick="openDMVideo('${v.id}', ${JSON.stringify(v.title)}, ${JSON.stringify(v.description || '')})">
+            <div class="dm-card-thumb">
+              ${v.thumbnail_360_url ? `<img src="${v.thumbnail_360_url}" alt="${escapeHtml(v.title)}" loading="lazy">` : `<div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs">No thumbnail</div>`}
+              <div class="dm-card-play">
+                <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <svg class="w-5 h-5 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </div>
+            <p class="dm-card-title">${escapeHtml(v.title)}</p>
+          </div>
+        `).join('');
+      } catch {
+        loading.classList.add('hidden');
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    async function openDMVideo(videoId, title, description) {
+      await goTo('dmplayer');
+      document.getElementById('dmPlayerTitle').textContent = title || 'Menonton...';
+      document.getElementById('dmPlayerVideoTitle').textContent = title || '';
+      document.getElementById('dmPlayerVideoDesc').textContent = description || '';
+      document.getElementById('dmDirectPlayer').src =
+        `https://www.dailymotion.com/embed/video/${encodeURIComponent(videoId)}?autoplay=1`;
+    }
+
+
     let episodeSearchDebounce = null;
     let selectedAnimeForEpisode = null; // { malId, title, poster }
     let animeInputMode = 'search'; // 'search' atau 'manual'
