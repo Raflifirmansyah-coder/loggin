@@ -317,6 +317,25 @@
   .dm-card:hover .dm-card-play { opacity: 1; }
   .dm-card-title { font-size: 12px; color: #a1a1aa; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
+  /* ---------- Avatar warna kustom ---------- */
+  .avatar-violet { background: linear-gradient(135deg, #7C3AED, #C026D3); }
+  .avatar-cyan { background: linear-gradient(135deg, #06B6D4, #3B82F6); }
+  .avatar-fuchsia { background: linear-gradient(135deg, #D946EF, #EC4899); }
+  .avatar-emerald { background: linear-gradient(135deg, #10B981, #059669); }
+  .avatar-amber { background: linear-gradient(135deg, #F59E0B, #EA580C); }
+  .avatar-rose { background: linear-gradient(135deg, #F43F5E, #BE123C); }
+
+  .color-swatch {
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
+  }
+  .color-swatch:hover { transform: scale(1.08); }
+  .color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
+
+  /* ---------- Comment section ---------- */
+  .comment-item { animation: fadeUp 0.3s ease forwards; }
+
   /* ---------- Dashboard ---------- */
   .row-fade { animation: rowIn 0.35s ease forwards; }
   @keyframes rowIn {
@@ -490,10 +509,10 @@
         </div>
 
         <div class="flex items-center gap-3 flex-shrink-0">
-          <div class="hidden sm:flex items-center gap-2.5 glass rounded-full pl-1.5 pr-4 py-1.5">
-            <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0" id="userAvatar"></div>
+          <button onclick="goTo('profile')" class="hidden sm:flex items-center gap-2.5 glass rounded-full pl-1.5 pr-4 py-1.5 hover:bg-white/5 transition-colors">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0 overflow-hidden" id="userAvatar"></div>
             <span class="text-sm text-zinc-300" id="userNameLabel"></span>
-          </div>
+          </button>
           <button onclick="logout()" class="text-sm text-zinc-400 hover:text-rose-400 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-white/5">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
             <span class="hidden md:inline">Keluar</span>
@@ -607,6 +626,66 @@
       </div>
       <h2 id="dmPlayerVideoTitle" class="font-display text-lg font-semibold text-white mb-1"></h2>
       <p id="dmPlayerVideoDesc" class="text-zinc-500 text-sm leading-relaxed"></p>
+    </main>
+  </div>
+
+  <!-- ======================= SCREEN: PROFIL SAYA ======================= -->
+  <div id="screenProfile" class="screen relative z-10 min-h-screen">
+
+    <header class="border-b border-white/[0.06] sticky top-0 z-30 backdrop-blur-xl bg-[#0A0A0F]/70">
+      <div class="max-w-3xl mx-auto px-5 md:px-8 py-4 flex items-center gap-4">
+        <button onclick="goTo('home')" class="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-medium">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Kembali
+        </button>
+        <h1 class="font-display text-base font-semibold text-white leading-none flex-1">Profil Saya</h1>
+      </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-5 md:px-8 py-10">
+      <div class="glass rounded-3xl p-7">
+
+        <div class="flex items-center gap-5 mb-8">
+          <div id="profileAvatarPreview" class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-semibold flex-shrink-0 overflow-hidden"></div>
+          <div>
+            <p id="profileUsernameLabel" class="font-display text-lg font-semibold text-white"></p>
+            <p id="profileEmailLabel" class="text-zinc-500 text-sm"></p>
+          </div>
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-xs font-medium text-zinc-400 mb-1.5">URL Foto Profil (opsional)</label>
+          <input id="profileAvatarUrlInput" type="text" placeholder="https://contoh.com/fotomu.jpg"
+            class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none">
+          <p class="text-zinc-600 text-xs mt-1.5">Kosongkan untuk pakai avatar warna dengan inisial nama.</p>
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-xs font-medium text-zinc-400 mb-2">Warna Tema Avatar</label>
+          <div class="flex gap-3" id="profileColorSwatches">
+            <div class="color-swatch avatar-violet" data-color="violet" onclick="selectAvatarColor('violet')"></div>
+            <div class="color-swatch avatar-cyan" data-color="cyan" onclick="selectAvatarColor('cyan')"></div>
+            <div class="color-swatch avatar-fuchsia" data-color="fuchsia" onclick="selectAvatarColor('fuchsia')"></div>
+            <div class="color-swatch avatar-emerald" data-color="emerald" onclick="selectAvatarColor('emerald')"></div>
+            <div class="color-swatch avatar-amber" data-color="amber" onclick="selectAvatarColor('amber')"></div>
+            <div class="color-swatch avatar-rose" data-color="rose" onclick="selectAvatarColor('rose')"></div>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-xs font-medium text-zinc-400 mb-1.5">Bio</label>
+          <textarea id="profileBioInput" rows="3" maxlength="160" placeholder="Ceritakan sedikit tentang dirimu..."
+            class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none resize-none"></textarea>
+          <p class="text-zinc-600 text-xs mt-1 text-right"><span id="profileBioCount">0</span>/160</p>
+        </div>
+
+        <p id="profileFormError" class="text-rose-400 text-xs mb-3 hidden"></p>
+        <p id="profileFormSuccess" class="text-emerald-400 text-xs mb-3 hidden"></p>
+
+        <button onclick="saveProfile()" class="btn-glow rounded-xl px-6 py-3 text-sm font-semibold font-display text-white">
+          Simpan Perubahan
+        </button>
+      </div>
     </main>
   </div>
 
@@ -969,6 +1048,38 @@
     function initials(name) {
       return (name || '?').trim().slice(0, 2).toUpperCase();
     }
+
+    // Menghasilkan markup avatar: foto (jika avatarUrl ada) atau lingkaran warna + inisial.
+    // Dipakai di header, comment, dan tempat lain yang menampilkan avatar pengguna.
+    function renderAvatarHtml(user) {
+      const color = ['violet','cyan','fuchsia','emerald','amber','rose'].includes(user.avatarColor) ? user.avatarColor : 'violet';
+      if (user.avatarUrl) {
+        return `<img src="${escapeHtml(user.avatarUrl)}" class="w-full h-full object-cover" alt="${escapeHtml(user.username)}" onerror="this.style.display='none'; this.parentElement.classList.add('avatar-${color}'); this.parentElement.textContent='${escapeHtml(initials(user.username))}';">`;
+      }
+      return '';
+    }
+
+    // Mengaplikasikan kelas warna avatar + isi inisial pada sebuah elemen DOM (dipakai untuk header/profile)
+    function applyAvatarToElement(el, user) {
+      const color = ['violet','cyan','fuchsia','emerald','amber','rose'].includes(user.avatarColor) ? user.avatarColor : 'violet';
+      el.className = el.className.replace(/avatar-(violet|cyan|fuchsia|emerald|amber|rose)/g, '').trim();
+      if (user.avatarUrl) {
+        const img = document.createElement('img');
+        img.src = user.avatarUrl;
+        img.className = 'w-full h-full object-cover';
+        img.alt = '';
+        img.onerror = () => {
+          el.classList.add(`avatar-${color}`);
+          el.textContent = initials(user.username);
+        };
+        el.innerHTML = '';
+        el.appendChild(img);
+      } else {
+        el.classList.add(`avatar-${color}`);
+        el.textContent = initials(user.username);
+      }
+    }
+
     function formatDateOnly(iso) {
       if (!iso) return '—';
       const d = new Date(iso);
@@ -1039,6 +1150,17 @@
         const iframe = document.getElementById('dmDirectPlayer');
         if (iframe) iframe.src = '';
         setActiveScreen('screenDMPlayer');
+        return;
+      }
+
+      if (route === 'profile') {
+        const user = await fetchCurrentUser();
+        if (!user) {
+          showGate('Belum masuk', 'Masuk ke akunmu dulu untuk membuka halaman ini.');
+          return;
+        }
+        renderProfilePage(user);
+        setActiveScreen('screenProfile');
         return;
       }
 
@@ -1272,7 +1394,7 @@
 
     function renderHome(user) {
       document.getElementById('userNameLabel').textContent = user.username;
-      document.getElementById('userAvatar').textContent = initials(user.username);
+      applyAvatarToElement(document.getElementById('userAvatar'), user);
 
       // Reset state browse setiap kali masuk ke home
       document.getElementById('animeSearchInput').value = '';
@@ -1576,7 +1698,33 @@
           </div>
 
         </div>
+
+        <!-- Comment section -->
+        <div class="mt-10 pt-8 border-t border-white/10">
+          <h3 class="font-display text-base font-semibold text-white mb-5">Komentar</h3>
+
+          <div class="flex gap-3 mb-8">
+            <div id="commentFormAvatar" class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 overflow-hidden"></div>
+            <div class="flex-1">
+              <textarea id="commentInput" rows="2" maxlength="1000" placeholder="Tulis komentar..."
+                class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none resize-none"></textarea>
+              <div class="flex justify-end mt-2">
+                <button onclick="submitComment()" class="btn-glow rounded-lg px-4 py-2 text-xs font-semibold font-display text-white">Kirim</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="commentList" class="space-y-5"></div>
+          <div id="commentLoading" class="flex items-center justify-center py-8">
+            <div class="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div id="commentEmpty" class="hidden text-center py-8">
+            <p class="text-zinc-500 text-sm">Belum ada komentar. Jadilah yang pertama!</p>
+          </div>
+        </div>
       `;
+
+      loadComments();
     }
 
     function playEpisode(index) {
@@ -1596,10 +1744,99 @@
       });
     }
 
+    // ======================= COMMENT SECTION =======================
+    function timeAgo(iso) {
+      const diffMs = Date.now() - new Date(iso).getTime();
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return 'baru saja';
+      if (mins < 60) return `${mins} menit lalu`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours} jam lalu`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `${days} hari lalu`;
+      return formatDateOnly(iso);
+    }
+
+    async function loadComments() {
+      const listEl = document.getElementById('commentList');
+      const loadingEl = document.getElementById('commentLoading');
+      const emptyEl = document.getElementById('commentEmpty');
+
+      // Render avatar di form input comment sesuai user yang login
+      if (currentUserCache) {
+        applyAvatarToElement(document.getElementById('commentFormAvatar'), currentUserCache);
+      }
+
+      listEl.innerHTML = '';
+      loadingEl.classList.remove('hidden');
+      emptyEl.classList.add('hidden');
+
+      try {
+        const data = await apiCall('GET', `/comments?malId=${currentDetailMalId}`);
+        const comments = data.comments || [];
+        loadingEl.classList.add('hidden');
+
+        if (comments.length === 0) {
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+
+        listEl.innerHTML = comments.map(c => {
+          const canDelete = currentUserCache && (currentUserCache.id === c.userId || currentUserCache.role === 'admin');
+          return `
+            <div class="comment-item flex gap-3">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 overflow-hidden avatar-${c.avatarColor}">
+                ${c.avatarUrl ? `<img src="${escapeHtml(c.avatarUrl)}" class="w-full h-full object-cover" alt="" onerror="this.style.display='none'">` : escapeHtml(initials(c.username))}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <span class="text-white text-sm font-medium">${escapeHtml(c.username)}</span>
+                  ${c.role === 'admin' ? `<span class="role-badge-admin text-[10px] px-1.5 py-0.5 rounded-full font-medium">Admin</span>` : ''}
+                  <span class="text-zinc-600 text-xs">${timeAgo(c.createdAt)}</span>
+                </div>
+                <p class="text-zinc-300 text-sm leading-relaxed whitespace-pre-line">${escapeHtml(c.content)}</p>
+                ${canDelete ? `<button onclick="deleteComment('${c.id}')" class="text-zinc-600 hover:text-rose-400 text-xs mt-1 transition-colors">Hapus</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        loadingEl.classList.add('hidden');
+        showToast(err.error || 'Gagal memuat komentar.', 'error');
+      }
+    }
+
+    async function submitComment() {
+      const input = document.getElementById('commentInput');
+      const content = input.value.trim();
+      if (!content) return;
+
+      try {
+        await apiCall('POST', '/comments', {
+          animeMalId: currentDetailMalId,
+          animeTitle: currentDetailAnime?.title || '',
+          content
+        });
+        input.value = '';
+        loadComments();
+      } catch (err) {
+        showToast(err.error || 'Gagal mengirim komentar.', 'error');
+      }
+    }
+
+    async function deleteComment(id) {
+      try {
+        await apiCall('DELETE', `/comments/${id}`);
+        loadComments();
+      } catch (err) {
+        showToast(err.error || 'Gagal menghapus komentar.', 'error');
+      }
+    }
+
     // ======================= ADMIN DASHBOARD =======================
     function renderAdminHeader(user) {
       document.getElementById('adminNameLabel').textContent = user.username;
-      document.getElementById('adminAvatar').textContent = initials(user.username);
+      applyAvatarToElement(document.getElementById('adminAvatar'), user);
     }
 
     function renderStats(users) {
@@ -1937,6 +2174,81 @@
       const desc = card.getAttribute('data-video-desc');
       openDMVideo(videoId, title, desc);
     });
+
+    // ======================= PROFIL SAYA =======================
+    let selectedProfileColor = 'violet';
+
+    function renderProfilePage(user) {
+      document.getElementById('profileUsernameLabel').textContent = user.username;
+      document.getElementById('profileEmailLabel').textContent = user.email;
+      document.getElementById('profileAvatarUrlInput').value = user.avatarUrl || '';
+      document.getElementById('profileBioInput').value = user.bio || '';
+      document.getElementById('profileBioCount').textContent = (user.bio || '').length;
+      document.getElementById('profileFormError').classList.add('hidden');
+      document.getElementById('profileFormSuccess').classList.add('hidden');
+
+      selectedProfileColor = user.avatarColor || 'violet';
+      updateColorSwatchUI();
+      updateProfileAvatarPreview(user);
+    }
+
+    function updateColorSwatchUI() {
+      document.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.classList.toggle('active', sw.getAttribute('data-color') === selectedProfileColor);
+      });
+    }
+
+    function updateProfileAvatarPreview(user) {
+      const preview = document.getElementById('profileAvatarPreview');
+      const avatarUrl = document.getElementById('profileAvatarUrlInput').value.trim();
+      preview.className = 'w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-semibold flex-shrink-0 overflow-hidden';
+      if (avatarUrl) {
+        preview.innerHTML = `<img src="${escapeHtml(avatarUrl)}" class="w-full h-full object-cover" alt="" onerror="this.style.display='none';">`;
+      } else {
+        preview.classList.add(`avatar-${selectedProfileColor}`);
+        preview.textContent = initials(user.username);
+      }
+    }
+
+    function selectAvatarColor(color) {
+      selectedProfileColor = color;
+      updateColorSwatchUI();
+      if (currentUserCache) updateProfileAvatarPreview(currentUserCache);
+    }
+
+    document.getElementById('profileAvatarUrlInput').addEventListener('input', () => {
+      if (currentUserCache) updateProfileAvatarPreview(currentUserCache);
+    });
+    document.getElementById('profileBioInput').addEventListener('input', (e) => {
+      document.getElementById('profileBioCount').textContent = e.target.value.length;
+    });
+
+    async function saveProfile() {
+      const errEl = document.getElementById('profileFormError');
+      const okEl = document.getElementById('profileFormSuccess');
+      errEl.classList.add('hidden');
+      okEl.classList.add('hidden');
+
+      const avatarUrl = document.getElementById('profileAvatarUrlInput').value.trim();
+      const bio = document.getElementById('profileBioInput').value.trim();
+
+      if (bio.length > 160) {
+        errEl.textContent = 'Bio maksimal 160 karakter.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const data = await apiCall('PATCH', '/me', { avatarUrl, bio, avatarColor: selectedProfileColor });
+        currentUserCache = data.user;
+        okEl.textContent = 'Profil berhasil diperbarui!';
+        okEl.classList.remove('hidden');
+        showToast('Profil berhasil diperbarui.', 'success');
+      } catch (err) {
+        errEl.textContent = err.error || 'Gagal menyimpan profil.';
+        errEl.classList.remove('hidden');
+      }
+    }
 
 
     let episodeSearchDebounce = null;
