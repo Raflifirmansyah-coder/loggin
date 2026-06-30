@@ -46,6 +46,9 @@ function toPublicUser(u) {
     username: u.username,
     email: u.email,
     role: u.role,
+    avatarUrl: u.avatar_url || '',
+    bio: u.bio || '',
+    avatarColor: u.avatar_color || 'violet',
     createdAt: u.created_at
   };
 }
@@ -198,6 +201,38 @@ app.get('/api/me', requireAuth, async (req, res) => {
     res.json({ user: toPublicUser(user) });
   } catch (err) {
     console.error('Me error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+const ALLOWED_AVATAR_COLORS = ['violet', 'cyan', 'fuchsia', 'emerald', 'amber', 'rose'];
+
+// Update profil sendiri (foto, bio, warna avatar)
+app.patch('/api/me', requireAuth, async (req, res) => {
+  const { avatarUrl, bio, avatarColor } = req.body || {};
+
+  const cleanAvatarUrl = (avatarUrl || '').trim();
+  const cleanBio = (bio || '').trim();
+  const cleanColor = ALLOWED_AVATAR_COLORS.includes(avatarColor) ? avatarColor : 'violet';
+
+  if (cleanBio.length > 160) {
+    return res.status(400).json({ error: 'Bio maksimal 160 karakter.' });
+  }
+  if (cleanAvatarUrl && cleanAvatarUrl.length > 500) {
+    return res.status(400).json({ error: 'URL foto profil terlalu panjang.' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE users SET avatar_url = $1, bio = $2, avatar_color = $3 WHERE id = $4 RETURNING *`,
+      [cleanAvatarUrl, cleanBio, cleanColor, req.userId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Pengguna tidak ditemukan.' });
+    }
+    res.json({ ok: true, user: toPublicUser(rows[0]) });
+  } catch (err) {
+    console.error('Update profile error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server.' });
   }
 });
@@ -451,6 +486,115 @@ app.post('/api/admin/settings', requireAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Save settings error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// ====================== COMMENT ROUTES ======================
+
+// Lihat semua comment untuk satu anime tertentu (siapa pun yang login boleh lihat)
+app.get('/api/comments', requireAuth, async (req, res) => {
+  const malId = parseInt(req.query.malId, 10);
+  if (!malId && malId !== 0) {
+    return res.status(400).json({ error: 'malId tidak valid.' });
+  }
+  try {
+    const { rows } = await pool.query(`
+      SELECT c.*, u.username, u.avatar_url, u.avatar_color, u.role
+      FROM comments c
+      JOIN users u ON u.id = c.user_id
+      WHERE c.anime_mal_id = $1
+      ORDER BY c.created_at DESC
+    `, [malId]);
+
+    const comments = rows.map(c => ({
+      id: c.id,
+      content: c.content,
+      createdAt: c.created_at,
+      userId: c.user_id,
+      username: c.username,
+      avatarUrl: c.avatar_url || '',
+      avatarColor: c.avatar_color || 'violet',
+      role: c.role
+    }));
+    res.json({ comments });
+  } catch (err) {
+    console.error('List comments error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// Tambah comment baru (siapa pun yang login boleh comment)
+app.post('/api/comments', requireAuth, async (req, res) => {
+  const { animeMalId, animeTitle, content } = req.body || {};
+  const malId = parseInt(animeMalId, 10);
+  const cleanTitle = (animeTitle || '').trim();
+  const cleanContent = (content || '').trim();
+
+  if (!malId && malId !== 0) {
+    return res.status(400).json({ error: 'Anime tidak valid.' });
+  }
+  if (!cleanContent) {
+    return res.status(400).json({ error: 'Komentar tidak boleh kosong.' });
+  }
+  if (cleanContent.length > 1000) {
+    return res.status(400).json({ error: 'Komentar maksimal 1000 karakter.' });
+  }
+
+  try {
+    const id = genId();
+    await pool.query(`
+      INSERT INTO comments (id, anime_mal_id, anime_title, user_id, content, created_at)
+      VALUES ($1, $2, $3, $4, $5, now())
+    `, [id, malId, cleanTitle, req.userId, cleanContent]);
+
+    const { rows } = await pool.query(`
+      SELECT c.*, u.username, u.avatar_url, u.avatar_color, u.role
+      FROM comments c JOIN users u ON u.id = c.user_id
+      WHERE c.id = $1
+    `, [id]);
+    const c = rows[0];
+
+    res.json({
+      ok: true,
+      comment: {
+        id: c.id,
+        content: c.content,
+        createdAt: c.created_at,
+        userId: c.user_id,
+        username: c.username,
+        avatarUrl: c.avatar_url || '',
+        avatarColor: c.avatar_color || 'violet',
+        role: c.role
+      }
+    });
+  } catch (err) {
+    console.error('Add comment error:', err);
+    res.status(500).json({ error: 'Terjadi kesalahan server.' });
+  }
+});
+
+// Hapus comment — pemilik comment sendiri ATAU admin boleh hapus
+app.delete('/api/comments/:id', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM comments WHERE id = $1', [req.params.id]);
+    const comment = rows[0];
+    if (!comment) {
+      return res.status(404).json({ error: 'Komentar tidak ditemukan.' });
+    }
+
+    const { rows: userRows } = await pool.query('SELECT role FROM users WHERE id = $1', [req.userId]);
+    const isOwner = comment.user_id === req.userId;
+    const isAdmin = userRows[0]?.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'Kamu tidak punya izin untuk menghapus komentar ini.' });
+    }
+
+    await pool.query('DELETE FROM comments WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete comment error:', err);
     res.status(500).json({ error: 'Terjadi kesalahan server.' });
   }
 });
